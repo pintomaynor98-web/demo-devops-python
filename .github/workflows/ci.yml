@@ -39,7 +39,6 @@ jobs:
           flake8 . --count --max-complexity=10 --max-line-length=120 --statistics || true
 
       # Tests Unitarios: Ejecuta pruebas y genera reporte de cobertura
-      # Cambio para forzar el pipeline
       - name: Run Unit Tests with Coverage
         env:
           DJANGO_SETTINGS_MODULE: demo.settings
