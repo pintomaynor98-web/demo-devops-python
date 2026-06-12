@@ -116,8 +116,13 @@ jobs:
       - name: Verify Health Endpoint
         shell: bash
         run: |
-          POD=$(kubectl get pod -l app=demo-django -o jsonpath="{.items[0].metadata.name}")
-          kubectl exec $POD -- curl -f http://localhost:8000/health/
+          - name: Verify Health Endpoint
+        run: |
+          # Obtenemos el nombre del pod usando la sintaxis de PowerShell
+          $podName = kubectl get pod -l app=demo-django -o jsonpath="{.items[0].metadata.name}"
+          
+          # Ejecutamos el comando dentro del pod
+          kubectl exec $podName -- curl -f http://localhost:8000/health/
 
       - name: Show Logs on Failure
         if: failure()
