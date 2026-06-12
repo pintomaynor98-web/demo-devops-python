@@ -114,6 +114,7 @@ jobs:
           kubectl get svc
 
       - name: Verify Health Endpoint
+        shell: bash
         run: |
           POD=$(kubectl get pod -l app=demo-django -o jsonpath="{.items[0].metadata.name}")
           kubectl exec $POD -- curl -f http://localhost:8000/health/
