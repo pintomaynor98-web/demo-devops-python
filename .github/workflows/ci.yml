@@ -125,3 +125,4 @@ jobs:
           kubectl describe deployment demo-django
           kubectl describe pods -l app=demo-django
           kubectl logs deployment/demo-django --tail=100
+#----------------------------------------------
