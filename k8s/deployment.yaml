@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-django
+  labels:
+    app: demo-django
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: demo-django
+  template:
+    metadata:
+      labels:
+        app: demo-django
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: django
+          image: mi-api-app:v1
+          imagePullPolicy: Always  # <--- Cambia esto a Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: demo-config
+            - secretRef:
+                name: demo-secrets
+          volumeMounts:
+            - name: sqlite-storage
+              mountPath: /app/data
+          # Comando de migración previo al arranque del servidor
+          command: ["sh", "-c"]
+          args:
+            - python manage.py migrate && 
+              gunicorn demo.wsgi:application --bind=0.0.0.0:8000 --workers=2 --threads=2 --timeout=60
+          
+          # Healthchecks actualizados
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            failureThreshold: 3
+            
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+      
+      volumes:
+        - name: sqlite-storage
+          persistentVolumeClaim:
+            claimName: sqlite-pvc

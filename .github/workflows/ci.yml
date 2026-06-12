@@ -72,3 +72,26 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USER }}/mi-app-django:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USER }}/mi-app-django:latest
+
+#--------------------------------------------
+deploy-to-k8s:
+    needs: test-and-build
+    # IMPORTANTE: Cambiamos 'ubuntu-latest' por tu runner local
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      - name: Deploy to Cluster
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout restart deployment/demo-django
+          kubectl rollout status deployment/demo-django --timeout=300s
+
+      - name: Verify Pods
+        run: |
+          kubectl get pods
+          kubectl get svc

@@ -1,30 +1,39 @@
-# Usamos una imagen base de Python ligera
 FROM python:3.11-slim
 
-# Evitamos archivos temporales de Python y buffers
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Variables de entorno
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Directorio donde vivirá la app en el contenedor
+# Directorio de trabajo
 WORKDIR /app
 
-# Instalamos herramientas necesarias
+# Instalación de dependencias del sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos los requerimientos e instalamos
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Crear usuario antes de copiar archivos
+RUN adduser --disabled-password --gecos "" appuser
 
-# Copiamos todo el código de tu carpeta a la imagen
+# Instalar dependencias Python
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copiar proyecto
 COPY . .
 
-# Seguridad: ejecutamos como un usuario sin privilegios
-RUN adduser --disabled-password --gecos "" appuser
+# Permisos
 RUN chown -R appuser:appuser /app
+
+# Usuario no privilegiado
 USER appuser
 
-# Exponemos el puerto y ejecutamos con gunicorn
+# Healthcheck: Verifica cada 30 segundos si el endpoint /api/users responde
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/api/users/ || exit 1
 EXPOSE 8000
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "demo.wsgi:application"]
+
+CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:8000", "demo.wsgi:application"]
