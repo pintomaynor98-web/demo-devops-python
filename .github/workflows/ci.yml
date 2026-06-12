@@ -76,22 +76,52 @@ jobs:
 #--------------------------------------------
   deploy-to-k8s:
     needs: test-and-build
-    # IMPORTANTE: Cambiamos 'ubuntu-latest' por tu runner local
     runs-on: self-hosted
     if: github.ref == 'refs/heads/master'
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Verify Cluster Access
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
 
-      - name: Deploy to Cluster
+      - name: Apply Kubernetes Manifests
         run: |
           kubectl apply -f k8s/
+
+      - name: Update Deployment Image
+        run: |
+          kubectl set image deployment/demo-django django=${{ secrets.DOCKER_USER }}/mi-app-django:${{ github.sha }}
+
+      - name: Restart Deployment
+        run: |
           kubectl rollout restart deployment/demo-django
+
+      - name: Wait for Rollout
+        run: |
           kubectl rollout status deployment/demo-django --timeout=300s
 
-      - name: Verify Pods
+      - name: Wait for Ready Pods
+        run: |
+          kubectl wait --for=condition=ready pod -l app=demo-django --timeout=180s
+
+      - name: Verify Resources
+        run: |
+          kubectl get deployments
+          kubectl get pods -o wide
+          kubectl get svc
+
+      - name: Verify Health Endpoint
+        run: |
+          POD=$(kubectl get pod -l app=demo-django -o jsonpath="{.items[0].metadata.name}")
+          kubectl exec $POD -- curl -f http://localhost:8000/health/
+
+      - name: Show Logs on Failure
+        if: failure()
         run: |
           kubectl get pods
-          kubectl get svc
+          kubectl describe deployment demo-django
+          kubectl describe pods -l app=demo-django
+          kubectl logs deployment/demo-django --tail=100
