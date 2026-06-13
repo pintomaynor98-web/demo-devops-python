@@ -132,7 +132,21 @@ If the user id does not exist, we will receive status 404 and the following mess
 {
     "detail": "Not found."
 }
+
+
 ```
+
+# Clonar el repositorio
+git clone https://github.com/pintomaynor98-web/demo-devops-python.git
+cd demo-devops-python
+
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Migrar base de datos
+python manage.py makemigrations
+python manage.py migrate
 ### DOCKER
 
 # 1. Construir la imagen localmente
@@ -204,7 +218,15 @@ La aplicación utiliza SQLite3 con un Persistent Volume Claim (PVC) para garanti
       |
 6. [ERROR HANDLING] → Si falla (if: failure())
       |-- Captura logs y estado (Describe/Logs)
+ ## Estructura de archivos
 
+ /
+├── k8s/               # archivos de configuración de Kubernetes
+├── .github/workflows/ # archivo .yml del pipeline
+├── Dockerfile         # plano de construcción Docker
+├── README.md          # Documentación 
+├── requirements.txt
+└── manage.py
 ## License
 
 Copyright © 2023 Devsu. All rights reserved.
