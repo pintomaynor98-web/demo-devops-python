@@ -133,6 +133,77 @@ If the user id does not exist, we will receive status 404 and the following mess
     "detail": "Not found."
 }
 ```
+### DOCKER
+
+# 1. Construir la imagen localmente
+docker build -t tu-usuario/nombre-de-tu-imagen .
+
+# 2. Ejecutar contenedor de prueba
+docker run -d -p 8000:8000 --name django-app tu-usuario/nombre-de-tu-imagen
+
+# 3. Ver logs del contenedor
+docker logs -f django-app
+### kubernets 
+# 1. Asegúrate de estar en el contexto de Docker Desktop
+kubectl config use-context docker-desktop
+
+# 2. Aplicar manifiestos de configuración
+kubectl apply -f k8s/
+
+# 3. Verificar estado
+kubectl get pods
+kubectl get svc
+
+# 4. Acceder al servicio
+
+
+### Diagrama Kubernets
+PETICIÓN DEL CLIENTE
+                |
+                v
+      +-------------------+
+      |      Service      | <--- Balanceador de carga interno
+      +---------+---------+
+            /         \
+           /           \
++------------------+ +------------------+
+|      POD 1       | |      POD 2       |
+| +--------------+ | | +--------------+ |
+| | Gunicorn/App | | | | Gunicorn/App | |
+| +--------------+ | | +--------------+ |
+| |   Volumen    | | | |   Volumen    | |
+| | Compartido   |===| | Compartido   | |
+| +--------------+ | | +--------------+ |
++------------------+ +------------------+
+          |                  |
+          +----[ PVC ]-------+
+
+La aplicación utiliza SQLite3 con un Persistent Volume Claim (PVC) para garantizar la persistencia de datos tras reinicios. Aunque esta configuración permite alta disponibilidad con dos réplicas, SQLite presenta limitaciones de concurrencia al ser una base de datos basada en archivos. Para escalar a entornos de alta demanda, se tiene planificada la migración a una base de datos relacional (como PostgreSQL), permitiendo una gestión de bloqueos más eficiente y mayor rendimiento bajo carga.
+### Diagrmama Pipeline
+
+1. [CÓDIGO] → GITHUB (Push a master)
+      |
+2. [CI: INTEGRACIÓN] → Entorno Ubuntu
+      |-- Instalar dependencias
+      |-- Calidad (Flake8)
+      |-- Seguridad (Safety)
+      |-- Pruebas (Pytest + Cobertura)
+      |
+3. [BUILD: EMPAQUETADO] → Docker Hub
+      |-- Construir imagen (:SHA + :latest)
+      |-- Push al registro
+      |
+4. [CD: DESPLIEGUE] → Kubernetes (Self-hosted runner)
+      |-- kubectl apply (Aplica cambios en YAML)
+      |-- kubectl set image (Actualiza imagen en Deployment)
+      |-- kubectl rollout (Actualización sin interrupción)
+      |-- kubectl wait (Espera a que los pods estén listos)
+      |
+5. [VERIFICACIÓN] → Health Check
+      |-- Ejecutar curl en pod activo
+      |
+6. [ERROR HANDLING] → Si falla (if: failure())
+      |-- Captura logs y estado (Describe/Logs)
 
 ## License
 
